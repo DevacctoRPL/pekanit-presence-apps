@@ -1,11 +1,13 @@
-import { useState, FormEvent } from 'react';
-import axios from 'axios';
+import React, { useState, FormEvent } from "react";
+import KelasModal from "../components/kelasModal";
+import { UserCircle, LockKeyhole, Loader2, Eye, EyeOff } from "lucide-react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
 
 interface User {
   nama: string;
-  kelas: string;
+  nama_kelas: string;
   nisn: string;
 }
 
@@ -16,68 +18,80 @@ interface LoginResponse {
   token: string;
 }
 
-const Login = () => {
+const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [nisn, setNisn] = useState('');
-  const [password, setPassword] = useState('');
-  const [kelas, setKelas] = useState('');
+  const [nisn, setNisn] = useState("");
+  const [password, setPassword] = useState("");
+  const [kelas, setSelectedKelas] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Function to open the modal
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  // Function to close the modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleSelectKelas = (kelas: string) => {
+    setSelectedKelas(kelas); // Set the selected class
+    closeModal(); // Close the modal after selecting the class
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await axios.post<LoginResponse>(
-        ' https://056f-202-51-199-226.ngrok-free.app/api/login/auth',
+        "https://db66-103-249-19-73.ngrok-free.app/api/login/auth",
         { nisn, password, kelas },
         {
           withCredentials: true,
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }
       );
 
       const { token, user } = response.data;
       if (!token) {
-        throw new Error('Token is missing in the response.');
+        throw new Error("Token is missing in the response.");
       }
 
-      // Store auth token
-      localStorage.setItem('token', token);
+      localStorage.setItem("token", token);
 
-      // Store user session data
       const credentials = {
         nama: user.nama,
-        kelas: user.kelas,
+        kelas: user.nama_kelas,
         nisn: user.nisn,
       };
 
-      // Set session cookie with secure flags
-      Cookies.set('credential', JSON.stringify(credentials), {
+      Cookies.set("credential", JSON.stringify(credentials), {
         secure: true,
-        sameSite: 'strict',
-        expires: 7, // 7 days
+        sameSite: "strict",
+        expires: 7,
       });
 
-      // Set auth header for subsequent requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-      // Redirect to home page
-      navigate('/');
+      navigate("/");
     } catch (err) {
       console.error(err);
 
       if (axios.isAxiosError(err)) {
         setError(
           err.response?.data?.message ||
-          'Login failed. Please check your credentials.'
+            "Login failed. Please check your credentials."
         );
       } else {
-        setError('An unexpected error occurred');
+        setError("An unexpected error occurred");
       }
     } finally {
       setLoading(false);
@@ -85,105 +99,107 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
+    <div className="min-h-screen bg-[#1F2937] flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full bg-[#2C3646] rounded-xl shadow-2xl p-8 space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-white">Pekan IT</h2>
+          <p className="mt-2 text-sm text-gray-300">
+            Selamat datang di Login Siswa
+          </p>
         </div>
+
         {error && (
-          <div
-            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-            role="alert"
-          >
-            <span className="block sm:inline">{error}</span>
+          <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg">
+            {error}
           </div>
         )}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label className="sr-only">NISN</label>
-              <input
-                id="nisn-address"
-                name="nisn"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="nisn"
-                value={nisn}
-                onChange={(e) => setNisn(e.target.value)}
-                disabled={loading}
-              />
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <UserCircle className="h-5 w-5 text-gray-400" />
             </div>
-            <div>
-              <label className="sr-only">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="sr-only">Kelas</label>
-              <input
-                id="kelas"
-                name="kelas"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="kelas"
-                value={kelas}
-                onChange={(e) => setKelas(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          </div>
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
+            <input
+              type="text"
+              required
+              value={nisn}
+              onChange={(e) => setNisn(e.target.value)}
               disabled={loading}
+              placeholder="NISN"
+              className="pl-10 w-full py-3 px-4 bg-[#3B4856] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#62929A] transition-all duration-300"
+            />
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <LockKeyhole className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type={passwordVisible ? "text" : "password"} // Toggle input type based on password visibility
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              placeholder="Password"
+              className="pl-10 w-full py-3 px-4 bg-[#3B4856] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#62929A] transition-all duration-300"
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-3 flex items-center text-gray-400"
+              onClick={() => setPasswordVisible(!passwordVisible)} // Toggle visibility
             >
-              {loading ? (
-                <span className="flex items-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Processing...
-                </span>
+              {passwordVisible ? (
+                <EyeOff className="h-5 w-5" />
               ) : (
-                'Sign in'
+                <Eye className="h-5 w-5" />
               )}
             </button>
           </div>
+
+          {/* Kelas Selection */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <UserCircle className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={kelas || "Pilih Kelas"}
+              onClick={openModal} // Open modal on click
+              disabled={loading}
+              placeholder="Pilih Kelas"
+              className="pl-10 w-full py-3 px-4 bg-[#3B4856] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#62929A] transition-all duration-300 cursor-pointer"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-[#4A5A6A] text-white rounded-lg hover:bg-[#62929A] focus:outline-none focus:ring-2 focus:ring-[#62929A] transition-all duration-300 flex items-center justify-center"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Memproses...
+              </>
+            ) : (
+              "Masuk"
+            )}
+          </button>
         </form>
+        {/* Kelas Modal */}
+        <KelasModal
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onSelectKelas={handleSelectKelas}
+        />
+
+        <div className="text-center">
+          <p className="text-sm text-gray-400">
+            © {new Date().getFullYear()} Created by Devaccto RPL
+          </p>
+        </div>
       </div>
     </div>
   );
 };
 
-export default Login
+export default Login;
